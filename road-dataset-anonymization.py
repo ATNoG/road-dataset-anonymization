@@ -1,15 +1,16 @@
+# coding: utf-8
+
 import json
 import argparse
-import random
-import string
 from os.path import splitext
-# import pprint
+import pprint
+
+__author__ = "Mário Antunes"
+__email__ = "mario.antunes@av.it.pt"
+__version__ = "1.0"
 
 
-def random_id(length):
-    return ''.join(random.choice(string.lowercase) for i in range(length))
-
-
+# Check if a int is a positive value
 def check_positive(value):
     ivalue = int(value)
     if ivalue <= 0:
@@ -17,6 +18,7 @@ def check_positive(value):
     return ivalue
 
 
+# Find the next trip in the stream of data
 def index_gap(l, gap):
     # print "Find next GAP -> "+str(gap)
     rv = -1
@@ -29,11 +31,12 @@ def index_gap(l, gap):
     return rv
 
 
+# Remove the extremes of the list
 def discard_points(l, skip):
     if len(l) > 1:
         begin = l[0]['timestamp'][0]
         end = l[-1]['timestamp'][0]
-        print('Discard points -> (' + str(len(l)) + '; ' + str(begin) + '; ' + str(end) + '; ' + str(skip) + ')')
+        # print('Discard points -> (' + str(len(l)) + '; ' + str(begin) + '; ' + str(end) + '; ' + str(skip) + ')')
         # discard top elements
         index = -1
         for i in range(0, len(l)):
@@ -62,45 +65,65 @@ def discard_points(l, skip):
             l = l[:index]
         else:
             l = []
-        print('Final list: '+str(len(l)))
+        # print('Final list: '+str(len(l)))
     else:
         l = []
     return l
 
 
+# Giving a stream of points, split them into different trips
+def stream2trips(l, gap, skip):
+    rv = []
+    index = index_gap(l, gap)
+    while index > -1:
+        trip = l[:index]
+        l = l[index:]
+        rv.extend(discard_points(trip, skip))
+        index = index_gap(l, gap)
+    return rv
+
+
 def main(args):
-    # pp = pprint.PrettyPrinter(indent=2)
+    pp = pprint.PrettyPrinter(indent=2)
     gap = args.gap * 60000
     skip = args.skip * 60000
     # print 'GAP: '+str(gap)+' SKIP: '+str(skip)
     for f in args.files:
         j = json.load(f)
-        dataset = j['data']
+        dataset = j['dataset']
         cache = {}
+        map_ids = []
         # load dataset to a single dict
         for element in dataset:
-            sensor_id = element['id']
-            new_id = random_id(15)
-            if sensor_id in cache:
-                new_id = cache[sensor_id]
-            else:
-                cache[sensor_id] = new_id
-            element['id'] = new_id
+            if element['id'] not in map_ids:
+                map_ids.append(element['id'])
+            uid = map_ids.index(element['id'])
+            element['id'] = uid
 
-        dataset.sort(key=lambda element: element['timestamp'][0])
-        print('Final trips sorted...')
+            if uid in cache:
+                cache[uid].append(element)
+            else:
+                cache[uid] = [element]
+
+        # For each sensor split stream into trips
+        dataset = []
+        for uid in cache:
+            l = cache[uid]
+            # Sort stream of points
+            l.sort(key=lambda element: element['timestamp'][0])
+            # Split points into trips and remove the extremes
+            dataset.extend(stream2trips(l, gap, skip))
         with open(splitext(f.name)[0]+'.anon.json', 'w') as out:
-            json.dump({'dataset': j}, out, indent=2)
+            json.dump({'dataset': dataset}, out)
         print('JSON dump...')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Road Dataset Anonymization')
     parser.add_argument('files', nargs='+', type=argparse.FileType('r'), help='files to process')
-    parser.add_argument('--gap',  type=check_positive, dest='gap',  default=2,
+    parser.add_argument('--gap',  type=check_positive, dest='gap',  default=3,
                         help='minimum gap between two trips (in minutes)')
-    parser.add_argument('--skip', type=check_positive, dest='skip', default=2,
+    parser.add_argument('--skip', type=check_positive, dest='skip', default=1,
                         help='the amount of events to be discarded (in minutes)')
     args = parser.parse_args()
     main(args)
-    # sys.exit(0)
