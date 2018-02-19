@@ -3,7 +3,6 @@
 import json
 import argparse
 from os.path import splitext
-import pprint
 
 __author__ = "Mário Antunes"
 __email__ = "mario.antunes@av.it.pt"
@@ -84,7 +83,6 @@ def stream2trips(l, gap, skip):
 
 
 def main(args):
-    pp = pprint.PrettyPrinter(indent=2)
     gap = args.gap * 60000
     skip = args.skip * 60000
     # print 'GAP: '+str(gap)+' SKIP: '+str(skip)
