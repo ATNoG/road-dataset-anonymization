@@ -1,13 +1,24 @@
 # coding: utf-8
 
+import argparse
 import json
 import csv
+from os.path import splitext
 
 __author__ = "Mário Antunes"
 __email__ = "mario.antunes@av.it.pt"
 __version__ = "1.0"
 
 
+# Check if a int is a positive value
+def check_positive(value):
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return ivalue
+
+
+# Computes the average of a list
 def average(list):
     if len(list) == 0:
         return 0
@@ -15,14 +26,15 @@ def average(list):
         return sum(list)/len(list)
 
 
+# Compress or expands a series of accelerations
 def fix_acc_series(timestamps, acc, nsamples):
-    currentsamples = len(timestamps)
+    current_samples = len(timestamps)
     begin = timestamps[0]
-    end = timestamps[currentsamples-1]
+    end = timestamps[current_samples-1]
     inc = (end-begin) / nsamples
     #print('('+str(begin)+'; '+str(end)+'; '+str(inc)+')')
-    if currentsamples < nsamples:
-        newacc = [acc[0]]
+    if current_samples < nsamples:
+        new_acc = [acc[0]]
         stb = 0
         ste = 1
         for i in range(1, nsamples):
@@ -32,19 +44,18 @@ def fix_acc_series(timestamps, acc, nsamples):
             while time > timestamps[ste]:
                 ste += 1
             #print(str(i)+"-> ("+str(timestamps[stb])+';'+str(timestamps[ste])+')')
-
             x1 = timestamps[stb]
             x2 = timestamps[ste]
             y1 = acc[stb]
             y2 = acc[ste]
             m = (y1-y2) / (x1-x2)
             b = y1 - (m*x1)
-            newacc.append(m*time+b)
-        return newacc
-    elif currentsamples > nsamples:
+            new_acc.append(m*time+b)
+        return new_acc
+    elif current_samples > nsamples:
         bins = [[] for x in range(nsamples)]
-        for i in range(currentsamples):
-            if i == currentsamples - 1:
+        for i in range(current_samples):
+            if i == current_samples - 1:
                 idx = nsamples - 1
             else:
                 idx = int((timestamps[i]-begin)/inc)
@@ -59,46 +70,47 @@ def fix_acc_series(timestamps, acc, nsamples):
                 bins[idx].append(acc[i])
             except IndexError:
                 print("ERROR: bad index value: "+str(idx))
-
         #print(bins)
-        newacc = []
-        for bin in bins:
-            newacc.append(average(bin))
-        return newacc
+        new_acc = []
+        for b in bins:
+            new_acc.append(average(b))
+        return new_acc
     else:
         return acc
 
-filename = 'dataset02_2014'
-timestamps = [100, 102, 104, 106, 108, 110]
-#values = [1, 2, 3, 4, 5, 6]
-#print(fix_acc_series(timestamps, values, 3))
-#timestamps = [100, 104, 110]
-#values = [1, 3, 6]
-#print(fix_acc_series(timestamps, values, 6))
+def main(args):
+    for f in args.files:
+        with open(f) as jsonfile, open(splitext(f.name)[0]+'.csv', 'w') as csvfile:
+            spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            spamwriter.writerow(['id', 'version', 'latitude', 'longitude', 'speed', 'begin', 'end']+['x']*args.ns+['y']*args.ns+['z']*args.ns)
+            json = json.load(jsonfile)
+            dataset = json['dataset']
+            for datum in dataset:
+                id = datum['id']
+                version = datum['version']
+                latitude = datum['latitude']
+                longitude = datum['longitude']
+                speed = datum['speed']
+                timestamps = datum['timestamp']
+                begin = timestamps[0]
+                end = timestamps[len(timestamps)-1]
+                x = datum['accelerometer']['x']
+                y = datum['accelerometer']['y']
+                z = datum['accelerometer']['z']
+                fx = fix_acc_series(timestamps, x, args.ns)
+                fy = fix_acc_series(timestamps, y, args.ns)
+                fz = fix_acc_series(timestamps, z, args.ns)
+                line = [id, version, latitude, longitude, speed, begin, end]
+                line.extend(fx)
+                line.extend(fy)
+                line.extend(fz)
+                spamwriter.writerow(line)
 
-with open(filename+'.csv', 'w') as csvfile:
-    spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    spamwriter.writerow(['id', 'version', 'latitude', 'longitude', 'speed', 'begin', 'end']+['x']*25+['y']*25+['z']*25)
-    with open(filename+'.json') as jsonfile:
-        json = json.load(jsonfile)
-        dataset = json['dataset']
-        for datum in dataset:
-            id = datum['id']
-            version = datum['version']
-            latitude = datum['latitude']
-            longitude = datum['longitude']
-            speed = datum['speed']
-            timestamps = datum['timestamp']
-            begin = timestamps[0]
-            end = timestamps[len(timestamps)-1]
-            x = datum['accelerometer']['x']
-            y = datum['accelerometer']['y']
-            z = datum['accelerometer']['z']
-            fx = fix_acc_series(timestamps, x, 25)
-            fy = fix_acc_series(timestamps, y, 25)
-            fz = fix_acc_series(timestamps, z, 25)
-            line = [id, version, latitude, longitude, speed, begin, end]
-            line.extend(fx)
-            line.extend(fy)
-            line.extend(fz)
-            spamwriter.writerow(line)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='JSON 2 CSV')
+    parser.add_argument('files', nargs='+', type=argparse.FileType('r'), help='files to process')
+    parser.add_argument('--ns', type=check_positive, dest='ns', default=15,
+                        help='number of acceleration samples')
+    args = parser.parse_args()
+    main(args)
