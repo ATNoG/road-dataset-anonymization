@@ -83,8 +83,8 @@ def main(args):
         with open(f) as jsonfile, open(splitext(f.name)[0]+'.csv', 'w') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             spamwriter.writerow(['id', 'version', 'latitude', 'longitude', 'speed', 'begin', 'end']+['x']*args.ns+['y']*args.ns+['z']*args.ns)
-            json = json.load(jsonfile)
-            dataset = json['dataset']
+            jfile = json.load(jsonfile)
+            dataset = jfile['dataset']
             for datum in dataset:
                 id = datum['id']
                 version = datum['version']
