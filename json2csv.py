@@ -32,7 +32,6 @@ def fix_acc_series(timestamps, acc, nsamples):
     begin = timestamps[0]
     end = timestamps[current_samples-1]
     inc = (end-begin) / nsamples
-    #print('('+str(begin)+'; '+str(end)+'; '+str(inc)+')')
     if current_samples < nsamples:
         new_acc = [acc[0]]
         stb = 0
@@ -43,7 +42,6 @@ def fix_acc_series(timestamps, acc, nsamples):
                 stb += 1
             while time > timestamps[ste]:
                 ste += 1
-            #print(str(i)+"-> ("+str(timestamps[stb])+';'+str(timestamps[ste])+')')
             x1 = timestamps[stb]
             x2 = timestamps[ste]
             y1 = acc[stb]
@@ -59,24 +57,21 @@ def fix_acc_series(timestamps, acc, nsamples):
                 idx = nsamples - 1
             else:
                 idx = int((timestamps[i]-begin)/inc)
-
             if idx >= len(bins):
                 idx = len(bins)-1
             if idx < 0:
                 idx = 0
-            #print("Timestamp: "+str(timestamps[i]))
-            #print("IDX: "+str(idx))
             try:
                 bins[idx].append(acc[i])
             except IndexError:
                 print("ERROR: bad index value: "+str(idx))
-        #print(bins)
         new_acc = []
         for b in bins:
             new_acc.append(average(b))
         return new_acc
     else:
         return acc
+
 
 def main(args):
     for f in args.files:

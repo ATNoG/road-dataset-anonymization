@@ -35,36 +35,28 @@ def discard_points(l, skip):
     if len(l) > 1:
         begin = l[0]['timestamp'][0]
         end = l[-1]['timestamp'][0]
-        # print('Discard points -> (' + str(len(l)) + '; ' + str(begin) + '; ' + str(end) + '; ' + str(skip) + ')')
         # discard top elements
         index = -1
         for i in range(0, len(l)):
             time = l[i]['timestamp'][0] - begin
             if time >= skip:
-                # print 'Time: ' + str(time)
                 index = i
                 break
-        # print 'Begin Index: '+str(index)
         if index > -1:
             l = l[index:]
         else:
             l = []
-        # print 'List without top: ' + str(len(l))
         # discard bottom elements
         index = -1
         for i in range(len(l) - 1, -1, -1):
             time = end - l[i]['timestamp'][0]
-            # print 'Time: ' + str(time)
             if time >= skip:
-                # print 'Time: ' + str(time)
                 index = i
                 break
-        # print 'End Index: '+str(index)
         if index > -1:
             l = l[:index]
         else:
             l = []
-        # print('Final list: '+str(len(l)))
     else:
         l = []
     return l
@@ -85,8 +77,8 @@ def stream2trips(l, gap, skip):
 def main(args):
     gap = args.gap * 60000
     skip = args.skip * 60000
-    # print 'GAP: '+str(gap)+' SKIP: '+str(skip)
     for f in args.files:
+        print('Processing file: '+f)
         j = json.load(f)
         dataset = j['dataset']
         cache = {}
@@ -113,7 +105,7 @@ def main(args):
             dataset.extend(stream2trips(l, gap, skip))
         with open(splitext(f.name)[0]+'.anon.json', 'w') as out:
             json.dump({'dataset': dataset}, out)
-        print('JSON dump...')
+        print('Anonymize file: '+splitext(f.name)[0]+'.anon.json')
 
 
 if __name__ == '__main__':
