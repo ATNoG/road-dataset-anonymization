@@ -14,7 +14,7 @@ __version__ = "1.0"
 def main(args):
     for f in args.files:
         trips = {}
-        with open(f) as jfile:
+        with f as jfile:
             jdata = json.load(jfile)
             print('Load trips.')
             dataset = jdata['dataset']

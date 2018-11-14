@@ -75,7 +75,7 @@ def fix_acc_series(timestamps, acc, nsamples):
 
 def main(args):
     for f in args.files:
-        with open(f) as jsonfile, open(splitext(f.name)[0]+'.csv', 'w') as csvfile:
+        with f as jsonfile, open(splitext(f.name)[0]+'.csv', 'w') as csvfile:
             spamwriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
             spamwriter.writerow(['id', 'version', 'latitude', 'longitude', 'speed', 'begin', 'end']+['x']*args.ns+['y']*args.ns+['z']*args.ns)
             jfile = json.load(jsonfile)
@@ -105,7 +105,6 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='JSON 2 CSV')
     parser.add_argument('files', nargs='+', type=argparse.FileType('r'), help='files to process')
-    parser.add_argument('--ns', type=check_positive, dest='ns', default=15,
-                        help='number of acceleration samples')
+    parser.add_argument('--ns', type=check_positive, dest='ns', default=15, help='number of acceleration samples')
     args = parser.parse_args()
     main(args)
